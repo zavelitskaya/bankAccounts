@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Договор {{ service.number }}{% endblock %}
+
+{% block content %}
+
+<div class="service-detail">
+    <div class="detail-card">
+        <div class="detail-header">
+            <h1>Договор {{ service.number }}</h1>
+        </div>
+
+        <div class="detail-content">
+            <div class="detail-info">
+                <div class="info-section">
+                    <h3>Основная информация</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Клиент:</label>
+                            <span>{{ service.client }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Услуга:</label>
+                            <span>{{ service.service_type }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Дата начала:</label>
+                            <span>{{ service.start_date }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Дата окончания:</label>
+                            <span>{{ service.end_date }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>Описание</h3>
+                    <p>{{ service.description }}</p>
+                </div>
+
+                <div class="detail-actions">
+                    <span class="add-to-cart-btn">
+                        Добавить в корзину
+                    </span>
+                    <span class="back-btn">
+                        Назад к списку
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-image">
+                <img src="{{ service.image_url }}" alt="{{ service.service_type }}" class="service-img">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

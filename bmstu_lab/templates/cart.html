@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Заявка №{{ application.id }}{% endblock %}
+
+{% block content %}
+<div class="cart-page">
+    <div class="application-header">
+        <h1>Заявка на открытие счета №{{ application.id }}</h1>
+        <div class="account-number-display">
+            <div class="account-number">
+                Номер счета: <strong>{{ application.account_number }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="cart-items-section">
+        <h2>Услуги для привязки к счету ({{ services|length }})</h2>
+        <div class="contracts-table">
+            {% for service in services %}
+            <div class="contract-table-row">
+                <div class="contract-table-cell image-cell">
+                    <img src="{{ service.image_url }}" alt="{{ service.service_type }}" class="contract-table-img">
+                </div>
+                <div class="contract-table-cell info-cell">
+                    <h3>{{ service.number }}</h3>
+                    <p class="contract-client">{{ service.client }}</p>
+                    <span class="service-badge">{{ service.service_type }}</span>
+                </div>
+                <div class="contract-table-cell toggle-cell">
+                    <div class="main-contract-toggle">
+                        <label class="toggle-label">
+                            <input type="checkbox" class="main-contract-checkbox" 
+                                   data-service-id="{{ service.id }}"
+                                   {% if application.main_service_id == service.id %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-text">Основная услуга</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Кнопка возврата -->
+
+    <div class="cart-actions">
+        <span class="continue-shopping-btn">
+            ← Вернуться к услугам
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Функция для переключения основной услуги (только визуально)
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.main-contract-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Снимаем галочки с других чекбоксов
+                document.querySelectorAll('.main-contract-checkbox').forEach(otherCheckbox => {
+                    if (otherCheckbox !== this) {
+                        otherCheckbox.checked = false;
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

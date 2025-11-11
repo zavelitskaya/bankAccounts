@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Услуги{% endblock %}
+
+{% block content %}
+<div class="controls-container">
+    <div class="search-box">
+        <input type="text" name="search" placeholder="Поиск по клиенту" class="search-input">
+        <button type="button" class="search-btn">
+            <img src="{% static 'icons/search.svg' %}" alt="Поиск" class="search-icon">
+        </button>
+    </div>
+
+    <div class="cart-widget">
+        <img src="{% static 'icons/cart.svg' %}" alt="Корзина" class="cart-icon">
+        <span class="cart-count">{{ cart_count }}</span>
+    </div>
+</div>
+
+<div class="contracts-grid">
+    {% for service in services %}
+    <div class="contract-card">
+        <div class="contract-info">
+            <h3>{{ service.number }}</h3>
+            <p>{{ service.client }}</p>
+        </div>
+
+        <div class="card-bottom">
+            <div class="card-buttons">
+                <span class="add-to-cart-btn">
+                    В корзину
+                </span>
+                <span class="learn-more-btn">
+                    Подробнее
+                </span>
+
+            </div>
+
+            <div class="contract-image">
+                <img src="{{ service.image_url }}" alt="{{ service.service_type }}" class="contract-img">
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
