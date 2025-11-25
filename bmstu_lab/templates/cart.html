@@ -7,9 +7,43 @@
 <div class="cart-page">
     <div class="application-header">
         <h1>Заявка на открытие счета №{{ application.id }}</h1>
-        <div class="account-number-display">
-            <div class="account-number">
-                Номер счета: <strong>{{ application.account_number }}</strong>
+        
+        <div class="account-number-form">
+            <div class="form-controls">
+                <div class="account-inputs">
+                    <div class="input-group">
+                        <label>Кому принадлежит счет (5 цифр):</label>
+                        <input type="text" name="account_owner" placeholder="40702" maxlength="5" class="account-input" 
+                               value="{{ application.account_owner_code|default:'40702' }}">
+                        <small class="input-hint">Пример: 40702 - негосударственные организации</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Валюта счета (3 цифры):</label>
+                        <input type="text" name="currency_code" placeholder="810" maxlength="3" class="account-input"
+                               value="{{ application.currency_code|default:'810' }}">
+                        <small class="input-hint">Пример: 810 - RUB, 840 - USD, 978 - EUR</small>
+                    </div>
+                </div>
+                
+                <!-- Кнопка генерации вынесена отдельно -->
+                <div class="generate-button-container">
+                    <button type="button" class="generate-account-btn" id="generateAccountBtn">
+                        Сгенерировать счет
+                    </button>
+                </div>
+            </div>
+
+            <div class="account-number-display">
+                <div class="account-number-card">
+                    <div class="account-number-label">Номер счета:</div>
+                    <div class="account-number-value" id="accountNumberDisplay">
+                        {% if application.account_number %}
+                            {{ application.account_number }}
+                        {% else %}
+                            Не сгенерирован
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -20,19 +54,17 @@
             {% for service in services %}
             <div class="contract-table-row">
                 <div class="contract-table-cell image-cell">
-                    <img src="{{ service.image_url }}" alt="{{ service.service_type }}" class="contract-table-img">
+                    <img src="{{ service.image_url }}" alt="{{ service.contract_type }}" class="contract-table-img">
                 </div>
                 <div class="contract-table-cell info-cell">
-                    <h3>{{ service.number }}</h3>
-                    <p class="contract-client">{{ service.client }}</p>
-                    <span class="service-badge">{{ service.service_type }}</span>
+                    <h3>{{ service.contract_number }}</h3>
+                    <p class="contract-client">{{ service.client_name }}</p>
+                    <span class="service-badge">{{ service.contract_type }}</span>
                 </div>
                 <div class="contract-table-cell toggle-cell">
                     <div class="main-contract-toggle">
                         <label class="toggle-label">
-                            <input type="checkbox" class="main-contract-checkbox" 
-                                   data-service-id="{{ service.id }}"
-                                   {% if application.main_service_id == service.id %}checked{% endif %}>
+                            <input type="checkbox" class="main-contract-checkbox" disabled>
                             <span class="toggle-slider"></span>
                             <span class="toggle-text">Основная услуга</span>
                         </label>
@@ -43,32 +75,76 @@
         </div>
     </div>
 
-    <!-- Кнопка возврата -->
-
-    <div class="cart-actions">
-        <span class="continue-shopping-btn">
-            ← Вернуться к услугам
-        </span>
+    <!-- Кнопка удаления -->
+    <div class="cart-actions-bottom">
+        <form method="post" action="{% url 'delete_application' application.id %}">
+            {% csrf_token %}
+            <button type="submit" class="delete-btn-gray" onclick="return confirm('Вы уверены, что хотите удалить эту заявку?')">
+                Удалить заявку
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Функция для переключения основной услуги (только визуально)
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.main-contract-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                // Снимаем галочки с других чекбоксов
-                document.querySelectorAll('.main-contract-checkbox').forEach(otherCheckbox => {
-                    if (otherCheckbox !== this) {
-                        otherCheckbox.checked = false;
-                    }
-                });
+    // Генерация номера счета
+    const generateBtn = document.getElementById('generateAccountBtn');
+    const accountOwnerInput = document.querySelector('input[name="account_owner"]');
+    const currencyInput = document.querySelector('input[name="currency_code"]');
+    const accountNumberDisplay = document.getElementById('accountNumberDisplay');
+    
+    generateBtn.addEventListener('click', function() {
+        const accountOwner = accountOwnerInput.value.padEnd(5, '0').substring(0, 5);
+        const currencyCode = currencyInput.value.padEnd(3, '0').substring(0, 3);
+        
+        if (accountOwner.length !== 5 || currencyCode.length !== 3) {
+            alert('Пожалуйста, введите 5 цифр для владельца счета и 3 цифры для валюты');
+            return;
+        }
+        
+        const randomPart = Math.random().toString().substring(2, 16).padEnd(14, '0').substring(0, 14);
+        const accountNumber = accountOwner + currencyCode + randomPart;
+        
+        const formattedNumber = accountNumber.match(/.{1,4}/g).join(' ');
+        
+        accountNumberDisplay.textContent = formattedNumber;
+        
+        fetch('/accounts/{{ application.id }}/update-account-number/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                account_number: accountNumber,
+                account_owner_code: accountOwner,
+                currency_code: currencyCode
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Ошибка при сохранении номера счета');
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при сохранении номера счета');
         });
     });
+    
+    // Подтверждение удаления
+    const deleteBtn = document.querySelector('.delete-btn-gray');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function(e) {
+            if (!confirm('Вы уверены, что хотите удалить эту заявку?')) {
+                e.preventDefault();
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

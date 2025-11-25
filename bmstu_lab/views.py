@@ -1,86 +1,142 @@
-from django.shortcuts import render
-from datetime import date
-from django.http import JsonResponse
-import random
-import string
-from django.conf import settings
+from django.shortcuts import render, get_object_or_404, redirect
+from django.db.models import Q
+from django.utils import timezone
+from django.http import Http404, JsonResponse
+from django.db import connection
+from .models import Contract, Account, AccountContract
+from django.contrib.auth.models import User
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import json
 
-def get_image_url(image_name):
-    """Функция для получения правильного URL картинки из MinIO"""
-    return f"http://localhost:9000/bankaccounts/{image_name}"
+def get_current_draft_account(user_id):
+    """Получаем текущую заявку в статусе Draft для пользователя через ORM"""
+    try:
+        return Account.objects.get(created_by_id=user_id, status='DRAFT')
+    except Account.DoesNotExist:
+        return None
 
-SERVICES = [
-    {
-        'id': 1,
-        'number': 'Д-001', 
-        'client': 'ООО "Центр кибернетической интеграции и облачных решений будущего"',
-        'service_type': 'РКО',
-        'image_url': "http://localhost:9000/bankaccounts/rko.png",
-        'description': 'Расчетно-кассовое обслуживание для малого бизнеса',
-        'start_date': '2024-01-15',
-        'end_date': '2025-01-14',
-        'status': 'Активен'
-
-    },
-    {
-        'id': 2,
-        'client': 'ИП Иванов А.С.',
-        'number': 'Д-002', 
-        'service_type': 'Зарплатный проект',
-        'image_url': "http://localhost:9000/bankaccounts/salary.png",
-        'description': 'Зарплатный проект для индивидуального предпринимателя',
-        'start_date': '2024-02-01',
-        'end_date': '2025-01-31', 
-        'status': 'Активен'
-    },
-    {
-        'id': 3, 
-        'client': 'ОАО "Агентство стратегического планирования и трансформации бизнес-процессов"',
-        'number': 'Д-003',
-        'service_type': 'Эквайринг',
-        'image_url': "http://localhost:9000/bankaccounts/acquiring.png",
-        'description': 'Торговый эквайринг для розничной сети',
-        'start_date': '2024-03-10',
-        'end_date': '2025-03-09',
-        'status': 'Активен'
-    }
-]
-
-APPLICATION = {
-    'id': 1,
-    'account_number': '40702810123456789013',
-    'services': [1, 2],
-    'main_service_id': 1
-}
+def get_cart_count(user_id):
+    """Получаем количество услуг в корзине через ORM"""
+    draft_account = get_current_draft_account(user_id)
+    if draft_account:
+        return AccountContract.objects.filter(account_id=draft_account.id).count()
+    return 0
 
 def contracts_list(request):
-    """Список всех услуг (договоров)"""
+    """GET: Список всех услуг (договоров) с поиском через ORM"""
+    search_query = request.GET.get('search', '').strip()
+    
+    # Берем активные договоры из БД через ORM
+    contracts = Contract.objects.filter(is_active=True)
+    
+    if search_query:
+        # Поиск через ORM
+        contracts = contracts.filter(
+            Q(client_name__icontains=search_query) |
+            Q(contract_number__icontains=search_query) |
+            Q(contract_type__icontains=search_query)
+        )
+    
+    # Временно: user_id = 1 для демо
+    user_id = 1
+    cart_count = get_cart_count(user_id)
+    has_draft_account = get_current_draft_account(user_id) is not None
+    current_account_id = get_current_draft_account(user_id).id if has_draft_account else None
+    
     return render(request, 'contracts_list.html', {
-        'services': SERVICES,
-        'cart_count': len(APPLICATION['services'])
+        'services': contracts,
+        'cart_count': cart_count,
+        'search_query': search_query,
+        'has_draft_account': has_draft_account,
+        'current_account_id': current_account_id
     })
 
 def contract_detail(request, contract_id):
-    """Детальная информация об услуге (договоре)"""
-    service = next((s for s in SERVICES if s['id'] == contract_id), None)
-    
-    if not service:
-        return render(request, '404.html', status=404)
+    """GET: Детальная информация об услуге через ORM"""
+    contract = get_object_or_404(Contract, id=contract_id)
     
     return render(request, 'contract_detail.html', {
-        'service': service
+        'service': contract
     })
 
-def cart(request, application_id):
-    """Страница заявки"""
-    if application_id != APPLICATION['id']:
-        return render(request, '404.html', status=404)
+def cart(request, account_id):
+    """GET: Страница заявки через ORM"""
+    account = get_object_or_404(Account, id=account_id)
     
-    # Получаем услуги, которые входят в заявку
-    application_services = [s for s in SERVICES if s['id'] in APPLICATION['services']]
+    # Проверяем что заявка в статусе Draft и не удалена
+    if account.status != 'DRAFT':
+        raise Http404("Заявка не найдена или уже обработана")
+    
+    account_contracts = AccountContract.objects.filter(account_id=account_id)
     
     return render(request, 'cart.html', {
-        'application': APPLICATION,
-        'services': application_services,
-        'all_services': SERVICES
+        'application': account,
+        'services': [ac.contract for ac in account_contracts],
+        'account_number': account.account_number
     })
+
+@require_POST
+def add_to_cart(request, contract_id):
+    """POST: Добавление услуги в заявку через ORM"""
+    # Временно: user_id = 1 для демо
+    user_id = 1
+    user = User.objects.get(id=user_id)
+    
+    # Получаем или создаем заявку через ORM
+    draft_account = get_current_draft_account(user_id)
+    if not draft_account:
+        draft_account = Account.objects.create(
+            status='DRAFT',
+            created_by=user,
+            updated_by=user
+        )
+    
+    contract = get_object_or_404(Contract, id=contract_id)
+    
+    # Добавляем услугу в заявку через ORM
+    account_contract, created = AccountContract.objects.get_or_create(
+        account=draft_account,
+        contract=contract,
+        defaults={'is_main_contract': False}
+    )
+    
+    if created:
+        return JsonResponse({'success': True, 'message': 'Услуга добавлена в заявку'})
+    else:
+        return JsonResponse({'success': False, 'message': 'Услуга уже в заявке'})
+
+@require_POST
+def update_account_number(request, account_id):
+    """POST: Сохранение номера счета через ORM"""
+    account = get_object_or_404(Account, id=account_id)
+    
+    if account.status != 'DRAFT':
+        return JsonResponse({'success': False, 'message': 'Заявка уже обработана'})
+    
+    data = json.loads(request.body)
+    
+    # Обновляем данные через ORM
+    account.account_number = data.get('account_number')
+    account.account_owner_code = data.get('account_owner_code')
+    account.currency_code = data.get('currency_code')
+    account.save()
+    
+    return JsonResponse({'success': True})
+
+def delete_application(request, account_id):
+    """POST: Удаление заявки через SQL UPDATE"""
+    if request.method == 'POST':
+        # Выполняем SQL UPDATE без ORM
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE account SET status = 'DELETED', completed_at = %s WHERE id = %s AND status = 'DRAFT'",
+                [timezone.now(), account_id]
+            )
+            if cursor.rowcount == 0:
+                return JsonResponse({'success': False, 'message': 'Заявка не найдена или уже обработана'})
+        
+        return redirect('contracts_list')
+    
+    # GET запрос - показываем страницу заявки
+    return cart(request, account_id)

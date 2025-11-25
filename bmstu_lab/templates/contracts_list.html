@@ -5,44 +5,92 @@
 
 {% block content %}
 <div class="controls-container">
-    <div class="search-box">
-        <input type="text" name="search" placeholder="Поиск по клиенту" class="search-input">
-        <button type="button" class="search-btn">
-            <img src="{% static 'icons/search.svg' %}" alt="Поиск" class="search-icon">
-        </button>
-    </div>
+    <form method="get" action="{% url 'contracts_list' %}" class="search-form">
+        <div class="search-box">
+            <input type="text" name="search" placeholder="Поиск по клиенту" class="search-input" 
+                   value="{{ search_query|default:'' }}">
+            <button type="submit" class="search-btn">
+                <img src="{% static 'icons/search.svg' %}" alt="Поиск" class="search-icon">
+            </button>
+        </div>
+    </form>
 
-    <div class="cart-widget">
+    {% if has_draft_account %}
+    <a href="{% url 'cart' account_id=current_account_id %}" class="cart-widget">
         <img src="{% static 'icons/cart.svg' %}" alt="Корзина" class="cart-icon">
         <span class="cart-count">{{ cart_count }}</span>
+    </a>
+    {% else %}
+    <div class="cart-widget disabled">
+        <img src="{% static 'icons/cart.svg' %}" alt="Корзина" class="cart-icon" style="opacity: 0.5;">
+        <span class="cart-count">0</span>
     </div>
+    {% endif %}
 </div>
 
 <div class="contracts-grid">
     {% for service in services %}
     <div class="contract-card">
         <div class="contract-info">
-            <h3>{{ service.number }}</h3>
-            <p>{{ service.client }}</p>
+            <h3>{{ service.contract_number }}</h3>
+            <p>{{ service.client_name }}</p>
         </div>
 
         <div class="card-bottom">
             <div class="card-buttons">
-                <span class="add-to-cart-btn">
+                <button class="add-to-cart-btn" data-contract-id="{{ service.id }}">
                     В корзину
-                </span>
-                <span class="learn-more-btn">
+                </button>
+                <a href="{% url 'contract_detail' service.id %}" class="learn-more-btn">
                     Подробнее
-                </span>
-
+                </a>
             </div>
 
             <div class="contract-image">
-                <img src="{{ service.image_url }}" alt="{{ service.service_type }}" class="contract-img">
+                <img src="{{ service.image_url }}" alt="{{ service.contract_type }}" class="contract-img">
             </div>
         </div>
     </div>
+    {% empty %}
+    <div class="no-results">
+        <p>Ничего не найдено по запросу "{{ search_query }}"</p>
+    </div>
     {% endfor %}
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка добавления в корзину
+    const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+    
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const contractId = this.getAttribute('data-contract-id');
+            
+            fetch(`/contracts/${contractId}/add-to-cart/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Услуга добавлена в заявку!');
+                    location.reload(); // Обновляем счетчик
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при добавлении в заявку');
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Договор {{ service.number }}{% endblock %}
+{% block title %}Договор {{ service.contract_number }}{% endblock %}
 
 {% block content %}
 
 <div class="service-detail">
     <div class="detail-card">
         <div class="detail-header">
-            <h1>Договор {{ service.number }}</h1>
+            <h1>Договор {{ service.contract_number }}</h1>  <!-- было service.number -->
         </div>
 
         <div class="detail-content">
@@ -18,11 +18,11 @@
                     <div class="info-grid">
                         <div class="info-item">
                             <label>Клиент:</label>
-                            <span>{{ service.client }}</span>
+                            <span>{{ service.client_name }}</span>  <!-- было service.client -->
                         </div>
                         <div class="info-item">
                             <label>Услуга:</label>
-                            <span>{{ service.service_type }}</span>
+                            <span>{{ service.contract_type }}</span>  <!-- было service.service_type -->
                         </div>
                         <div class="info-item">
                             <label>Дата начала:</label>
@@ -41,17 +41,12 @@
                 </div>
 
                 <div class="detail-actions">
-                    <span class="add-to-cart-btn">
-                        Добавить в корзину
-                    </span>
-                    <span class="back-btn">
-                        Назад к списку
-                    </span>
+
                 </div>
             </div>
 
             <div class="detail-image">
-                <img src="{{ service.image_url }}" alt="{{ service.service_type }}" class="service-img">
+                <img src="{{ service.image_url }}" alt="{{ service.contract_type }}" class="service-img">
             </div>
         </div>
     </div>
