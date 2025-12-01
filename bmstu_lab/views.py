@@ -74,11 +74,21 @@ def cart(request, account_id):
         # Если заявка не существует - редирект на главную
         return redirect('contracts_list')
     
-    account_contracts = AccountContract.objects.filter(account_id=account_id)
+    # Получаем связи договоров с заявкой с информацией о основном договоре
+    account_contracts = AccountContract.objects.filter(account_id=account_id).select_related('contract')
+    
+    # Подготавливаем данные для шаблона
+    services_data = []
+    for ac in account_contracts:
+        services_data.append({
+            'contract': ac.contract,
+            'is_main_contract': ac.is_main_contract,
+            'account_contract_id': ac.id  # ID связи для возможного обновления
+        })
     
     return render(request, 'cart.html', {
         'application': account,
-        'services': [ac.contract for ac in account_contracts],
+        'services_data': services_data,  # Меняем services на services_data
         'account_number': account.account_number
     })
 

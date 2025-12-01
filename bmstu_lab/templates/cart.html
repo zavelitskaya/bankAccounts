@@ -5,53 +5,83 @@
 
 {% block content %}
 <div class="cart-page">
-    <div class="application-header">
-        <h1>Заявка на открытие счета №{{ application.id }}</h1>
+<div class="application-header">
+    <h1>Заявка на открытие счета №{{ application.id }}</h1>
+    
+    <div class="account-number-section">
+        <div class="section-header">
+            <h2>Номер счета</h2>
+        </div>
         
-        <div class="account-number-form">
-            <div class="form-controls">
-                <div class="account-inputs">
-                    <div class="input-group">
-                        <label>Кому принадлежит счет (5 цифр):</label>
-                        <input type="text" name="account_owner" placeholder="40702" maxlength="5" class="account-input" 
-                               value="{{ application.account_owner_code|default:'40702' }}">
-                        <small class="input-hint">Пример: 40702 - негосударственные организации</small>
+        <!-- Убираем .account-number-container, оставляем только .account-parts-container -->
+        <div class="account-parts-container">
+            <!-- Часть 1: Кому принадлежит счет (5 цифр) -->
+            <div class="account-part-wrapper">
+                <div class="account-display-field short-field">
+                    <div class="digits-container">
+                        {% if application.account_owner_code %}
+                            {% for digit in application.account_owner_code|stringformat:"d" %}
+                            <span class="digit">{{ digit }}</span>
+                            {% endfor %}
+                        {% else %}
+                            {% for i in "12345" %}
+                            <span class="digit-placeholder"></span>
+                            {% endfor %}
+                        {% endif %}
                     </div>
-                    <div class="input-group">
-                        <label>Валюта счета (3 цифры):</label>
-                        <input type="text" name="currency_code" placeholder="810" maxlength="3" class="account-input"
-                               value="{{ application.currency_code|default:'810' }}">
-                        <small class="input-hint">Пример: 810 - RUB, 840 - USD, 978 - EUR</small>
-                    </div>
-                </div>
-                
-                <!-- Кнопка генерации вынесена отдельно -->
-                <div class="generate-button-container">
-                    <button type="button" class="generate-account-btn" id="generateAccountBtn">
-                        Сгенерировать счет
-                    </button>
                 </div>
             </div>
-
-            <div class="account-number-display">
-                <div class="account-number-card">
-                    <div class="account-number-label">Номер счета:</div>
-                    <div class="account-number-value" id="accountNumberDisplay">
-                        {% if application.account_number %}
-                            {{ application.account_number }}
+            
+            <!-- Точка между полями 1 и 2 -->
+            <div class="between-field-separator">.</div>
+            
+            <!-- Часть 2: Валюта счета (3 цифры) -->
+            <div class="account-part-wrapper">
+                <div class="account-display-field short-field">
+                    <div class="digits-container">
+                        {% if application.currency_code %}
+                            {% for digit in application.currency_code|stringformat:"d" %}
+                            <span class="digit">{{ digit }}</span>
+                            {% endfor %}
                         {% else %}
-                            Не сгенерирован
+                            {% for i in "123" %}
+                            <span class="digit-placeholder"></span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Точка между полями 2 и 3 -->
+            <div class="between-field-separator">.</div>
+            
+            <!-- Часть 3: Остаток счета (14 цифр) -->
+            <div class="account-part-wrapper">
+                <div class="account-display-field long-field">
+                    <div class="digits-container">
+                        {% if application.account_number %}
+                            {% with remainder=application.account_number|slice:"8:" %}
+                                {% for digit in remainder %}
+                                <span class="digit">{{ digit }}</span>
+                                {% endfor %}
+                            {% endwith %}
+                        {% else %}
+                            {% for i in "12345678901234" %}
+                            <span class="digit-placeholder"></span>
+                            {% endfor %}
                         {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
     <div class="cart-items-section">
-        <h2>Услуги для привязки к счету ({{ services|length }})</h2>
+        <h2>Услуги для привязки к счету ({{ services_data|length }})</h2>
         <div class="contracts-table">
-            {% for service in services %}
+            {% for service_item in services_data %}
+            {% with service=service_item.contract is_main=service_item.is_main_contract %}
             <div class="contract-table-row">
                 <div class="contract-table-cell image-cell">
                     <img src="{{ service.image_url }}" alt="{{ service.contract_type }}" class="contract-table-img">
@@ -64,17 +94,18 @@
                 <div class="contract-table-cell toggle-cell">
                     <div class="main-contract-toggle">
                         <label class="toggle-label">
-                            <input type="checkbox" class="main-contract-checkbox" disabled>
+                            <input type="checkbox" class="main-contract-checkbox" {% if is_main %}checked{% endif %}
+                                disabled>
                             <span class="toggle-slider"></span>
                             <span class="toggle-text">Основная услуга</span>
                         </label>
                     </div>
                 </div>
             </div>
+            {% endwith %}
             {% endfor %}
         </div>
     </div>
-
     <!-- Кнопка удаления -->
     <div class="cart-actions-bottom">
         <form method="post" action="{% url 'delete_application' application.id %}">
@@ -89,52 +120,52 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Генерация номера счета (оставляем, т.к. это функциональность генерации)
-    const generateBtn = document.getElementById('generateAccountBtn');
-    const accountOwnerInput = document.querySelector('input[name="account_owner"]');
-    const currencyInput = document.querySelector('input[name="currency_code"]');
-    const accountNumberDisplay = document.getElementById('accountNumberDisplay');
-    
-    generateBtn.addEventListener('click', function() {
-        const accountOwner = accountOwnerInput.value.padEnd(5, '0').substring(0, 5);
-        const currencyCode = currencyInput.value.padEnd(3, '0').substring(0, 3);
-        
-        if (accountOwner.length !== 5 || currencyCode.length !== 3) {
-            alert('Пожалуйста, введите 5 цифр для владельца счета и 3 цифры для валюты');
-            return;
-        }
-        
-        const randomPart = Math.random().toString().substring(2, 16).padEnd(14, '0').substring(0, 14);
-        const accountNumber = accountOwner + currencyCode + randomPart;
-        
-        const formattedNumber = accountNumber.match(/.{1,4}/g).join(' ');
-        
-        accountNumberDisplay.textContent = formattedNumber;
-        
-        fetch('/accounts/{{ application.id }}/update-account-number/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                account_number: accountNumber,
-                account_owner_code: accountOwner,
-                currency_code: currencyCode
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.success) {
-                alert('Ошибка при сохранении номера счета');
+    document.addEventListener('DOMContentLoaded', function () {
+        // Генерация номера счета (оставляем, т.к. это функциональность генерации)
+        const generateBtn = document.getElementById('generateAccountBtn');
+        const accountOwnerInput = document.querySelector('input[name="account_owner"]');
+        const currencyInput = document.querySelector('input[name="currency_code"]');
+        const accountNumberDisplay = document.getElementById('accountNumberDisplay');
+
+        generateBtn.addEventListener('click', function () {
+            const accountOwner = accountOwnerInput.value.padEnd(5, '0').substring(0, 5);
+            const currencyCode = currencyInput.value.padEnd(3, '0').substring(0, 3);
+
+            if (accountOwner.length !== 5 || currencyCode.length !== 3) {
+                alert('Пожалуйста, введите 5 цифр для владельца счета и 3 цифры для валюты');
+                return;
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Ошибка при сохранении номера счета');
+
+            const randomPart = Math.random().toString().substring(2, 16).padEnd(14, '0').substring(0, 14);
+            const accountNumber = accountOwner + currencyCode + randomPart;
+
+            const formattedNumber = accountNumber.match(/.{1,4}/g).join(' ');
+
+            accountNumberDisplay.textContent = formattedNumber;
+
+            fetch('/accounts/{{ application.id }}/update-account-number/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    account_number: accountNumber,
+                    account_owner_code: accountOwner,
+                    currency_code: currencyCode
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Ошибка при сохранении номера счета');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ошибка при сохранении номера счета');
+                });
         });
     });
-});
 </script>
 {% endblock %}

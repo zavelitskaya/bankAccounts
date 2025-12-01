@@ -356,123 +356,136 @@ main {
     text-align: center;
 }
 
-/* Форма счета */
-.account-number-form {
-    display: flex;
-    align-items: stretch;
+/* Секция номера счета */
+.account-number-section {
     background: white;
-    padding: 25px;
     border-radius: 12px;
+    padding: 30px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     margin-top: 20px;
-    gap: 30px;
 }
 
-.form-controls {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    gap: 20px;
+.section-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-.account-inputs {
-    display: flex;
-    gap: 20px;
-    width: 100%;
-}
-
-.input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex: 1;
-}
-
-.input-group label {
-    font-weight: 500;
-    color: #333;
-    font-size: 14px;
-}
-
-.account-input {
-    padding: 12px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 16px;
-    transition: border-color 0.3s ease;
-    width: 100%;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
-}
-
-.account-input:focus {
-    outline: none;
-    border-color: #3261EC;
-}
-
-.input-hint {
-    font-size: 12px;
-    color: #666;
-    font-style: italic;
-    margin-top: 4px;
-}
-
-.generate-button-container {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    width: 100%;
-}
-
-.generate-account-btn {
-    background: #3261EC;
-    color: white;
-    border: none;
-    padding: 14px 28px;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    white-space: nowrap;
-    min-width: 180px;
-}
-
-.generate-account-btn:hover {
-    background: #2a56d6;
-}
-
-.account-number-display {
-    display: flex;
-    align-items: center;
-    padding-left: 30px;
-    border-left: 2px solid #e0e0e0;
-    min-height: 70px;
-}
-
-.account-number-card {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 15px 20px;
-    background: white;
-    border-radius: 8px;
-    color: #666;
-    min-width: 280px;
-}
-
-.account-number-label {
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0.9;
-}
-
-.account-number-value {
-    font-family: 'Courier New', monospace;
-    font-size: 18px;
+.section-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 24px;
     font-weight: 600;
-    letter-spacing: 1.5px;
+}
+
+/* Контейнер для номера счета */
+.account-number-container {
+    padding: 20px 0;
+    background: transparent;
+    border: none;
+}
+
+/* Стили для отображения номера счета */
+.account-parts-container {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    /* Меняем с center на flex-start */
+    justify-content: flex-start;
+}
+
+/* Обертка для каждой части счета */
+.account-part-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Поля отображения счета */
+.account-display-field {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: 600;
+    padding: 10px 5px;
+    background: white;
+    border: 2px solid #3261EC;
+    border-radius: 4px;
+    min-height: 50px;
+}
+
+/* Узкое поле (для 5 и 3 цифр) */
+.account-display-field.short-field {
+    min-width: 140px;
+    max-width: 160px;
+}
+
+/* Широкое поле (для 14 цифр) */
+.account-display-field.long-field {
+    min-width: 320px;
+    max-width: 380px;
+}
+
+/* Контейнер для цифр */
+.digits-container {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Отдельная цифра */
+.digit {
     color: #3261EC;
+    text-align: center;
+    min-width: 16px;
+    position: relative;
+    padding-bottom: 4px;
+}
+
+/* Подчеркивание для цифр */
+.digit::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #3261EC;
+}
+
+/* Заполнитель (только подчеркивание) */
+.digit-placeholder {
+    color: transparent;
+    text-align: center;
+    min-width: 16px;
+    position: relative;
+    padding-bottom: 4px;
+}
+
+/* Подчеркивание для заполнителя */
+.digit-placeholder::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #ccc;
+}
+
+/* Точка-разделитель МЕЖДУ полями */
+.between-field-separator {
+    font-size: 28px;
+    font-weight: bold;
+    color: #3261EC;
+    margin: 0 10px;
+    height: 50px;
+    display: flex;
+    align-items: center;
 }
 
 .cart-items-section h2 {
@@ -650,30 +663,22 @@ main {
         text-align: center;
     }
     
-    .account-number-form {
+    .account-display-field.short-field {
+        min-width: 100px;
+        max-width: 120px;
+    }
+    
+    .account-display-field.long-field {
+        min-width: 250px;
+        max-width: 300px;
+    }
+    
+    .account-parts-container {
         flex-direction: column;
-        gap: 20px;
-        text-align: center;
+        gap: 10px;
     }
     
-    .form-controls {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .account-inputs {
-        flex-direction: column;
-    }
-    
-    .generate-button-container {
-        justify-content: center;
-    }
-    
-    .account-number-display {
-        padding-left: 0;
-        border-left: none;
-        border-top: 2px solid #e0e0e0;
-        padding-top: 20px;
-        text-align: center;
+    .between-field-separator {
+        display: none;
     }
 }
