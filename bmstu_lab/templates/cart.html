@@ -79,7 +79,7 @@
     <div class="cart-actions-bottom">
         <form method="post" action="{% url 'delete_application' application.id %}">
             {% csrf_token %}
-            <button type="submit" class="delete-btn-gray" onclick="return confirm('Вы уверены, что хотите удалить эту заявку?')">
+            <button type="submit" class="delete-btn-gray">
                 Удалить заявку
             </button>
         </form>
@@ -90,7 +90,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Генерация номера счета
+    // Генерация номера счета (оставляем, т.к. это функциональность генерации)
     const generateBtn = document.getElementById('generateAccountBtn');
     const accountOwnerInput = document.querySelector('input[name="account_owner"]');
     const currencyInput = document.querySelector('input[name="currency_code"]');
@@ -135,16 +135,6 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Ошибка при сохранении номера счета');
         });
     });
-    
-    // Подтверждение удаления
-    const deleteBtn = document.querySelector('.delete-btn-gray');
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', function(e) {
-            if (!confirm('Вы уверены, что хотите удалить эту заявку?')) {
-                e.preventDefault();
-            }
-        });
-    }
 });
 </script>
 {% endblock %}

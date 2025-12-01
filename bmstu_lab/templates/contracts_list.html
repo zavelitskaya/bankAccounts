@@ -38,9 +38,13 @@
 
         <div class="card-bottom">
             <div class="card-buttons">
-                <button class="add-to-cart-btn" data-contract-id="{{ service.id }}">
-                    В корзину
-                </button>
+                <!-- Заменяем кнопку на форму -->
+                <form method="post" action="{% url 'add_to_cart' service.id %}" class="add-to-cart-form">
+                    {% csrf_token %}
+                    <button type="submit" class="add-to-cart-btn">
+                        В корзину
+                    </button>
+                </form>
                 <a href="{% url 'contract_detail' service.id %}" class="learn-more-btn">
                     Подробнее
                 </a>
@@ -60,37 +64,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Обработка добавления в корзину
-    const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
-    
-    addToCartButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const contractId = this.getAttribute('data-contract-id');
-            
-            fetch(`/contracts/${contractId}/add-to-cart/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Услуга добавлена в заявку!');
-                    location.reload(); // Обновляем счетчик
-                } else {
-                    alert(data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Ошибка при добавлении в заявку');
-            });
-        });
-    });
-});
-</script>
+<!-- Убрали JavaScript код -->
 {% endblock %}

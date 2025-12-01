@@ -62,11 +62,17 @@ def contract_detail(request, contract_id):
 
 def cart(request, account_id):
     """GET: Страница заявки через ORM"""
-    account = get_object_or_404(Account, id=account_id)
-    
-    # Проверяем что заявка в статусе Draft и не удалена
-    if account.status != 'DRAFT':
-        raise Http404("Заявка не найдена или уже обработана")
+    try:
+        account = Account.objects.get(id=account_id)
+        
+        # Проверяем что заявка в статусе Draft и не удалена
+        if account.status != 'DRAFT':
+            # Если заявка не в статусе DRAFT (удалена или обработана) - редирект на главную
+            return redirect('contracts_list')
+        
+    except Account.DoesNotExist:
+        # Если заявка не существует - редирект на главную
+        return redirect('contracts_list')
     
     account_contracts = AccountContract.objects.filter(account_id=account_id)
     
@@ -76,35 +82,36 @@ def cart(request, account_id):
         'account_number': account.account_number
     })
 
-@require_POST
 def add_to_cart(request, contract_id):
-    """POST: Добавление услуги в заявку через ORM"""
-    # Временно: user_id = 1 для демо
-    user_id = 1
-    user = User.objects.get(id=user_id)
-    
-    # Получаем или создаем заявку через ORM
-    draft_account = get_current_draft_account(user_id)
-    if not draft_account:
-        draft_account = Account.objects.create(
-            status='DRAFT',
-            created_by=user,
-            updated_by=user
+    """Добавление услуги в заявку через ORM - обычный POST запрос"""
+    if request.method == 'POST':
+        # Временно: user_id = 1 для демо
+        user_id = 1
+        user = User.objects.get(id=user_id)
+        
+        # Получаем или создаем заявку через ORM
+        draft_account = get_current_draft_account(user_id)
+        if not draft_account:
+            draft_account = Account.objects.create(
+                status='DRAFT',
+                created_by=user,
+                updated_by=user
+            )
+        
+        contract = get_object_or_404(Contract, id=contract_id)
+        
+        # Добавляем услугу в заявку через ORM
+        account_contract, created = AccountContract.objects.get_or_create(
+            account=draft_account,
+            contract=contract,
+            defaults={'is_main_contract': False}
         )
+        
+        # Перенаправляем обратно на список договоров
+        return redirect('contracts_list')
     
-    contract = get_object_or_404(Contract, id=contract_id)
-    
-    # Добавляем услугу в заявку через ORM
-    account_contract, created = AccountContract.objects.get_or_create(
-        account=draft_account,
-        contract=contract,
-        defaults={'is_main_contract': False}
-    )
-    
-    if created:
-        return JsonResponse({'success': True, 'message': 'Услуга добавлена в заявку'})
-    else:
-        return JsonResponse({'success': False, 'message': 'Услуга уже в заявке'})
+    # Если GET запрос - просто перенаправляем на список
+    return redirect('contracts_list')
 
 @require_POST
 def update_account_number(request, account_id):
@@ -134,9 +141,10 @@ def delete_application(request, account_id):
                 [timezone.now(), account_id]
             )
             if cursor.rowcount == 0:
-                return JsonResponse({'success': False, 'message': 'Заявка не найдена или уже обработана'})
+                # Если заявка не найдена или уже обработана - редирект на главную
+                return redirect('contracts_list')
         
         return redirect('contracts_list')
     
-    # GET запрос - показываем страницу заявки
+    # GET запрос - показываем страницу заявки (но уже с проверками выше)
     return cart(request, account_id)
